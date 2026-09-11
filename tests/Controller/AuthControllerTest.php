@@ -47,13 +47,14 @@ class AuthControllerTest extends WebTestCase
     ], $overrides);
   }
 
-  private function createUser(string $email, string $pseudo): User
+  private function createUser(string $email, string $pseudo, array $roles = []): User
   {
     $entityManager = static::getContainer()->get('doctrine')->getManager();
 
     $user = new User();
     $user->setEmail($email);
     $user->setPseudo($pseudo);
+    $user->setRoles($roles);
     $user->setPassword('$2y$13$placeholderplaceholderplaceholderplaceholderha');
     $user->setCreatedAt(new \DateTimeImmutable());
     $user->setActive(true);
@@ -217,6 +218,45 @@ class AuthControllerTest extends WebTestCase
     $this->createMember('suspendu@mail.fr', 'Suspendu', 'Test123!', false);
 
     $response = $this->post('/api/auth/sign-in', ['email' => 'suspendu@mail.fr', 'password' => 'Test123!']);
+
+    $this->assertEquals(403, $response->getStatusCode());
+  }
+
+
+  // Mot de passe oublié
+  public function testForgotPasswordSendsTemporaryPassword(): void
+  {
+    $this->createUser('membre@mail.fr', 'Membre');
+
+    $response = $this->post('/api/auth/forgot-password', ['email' => 'membre@mail.fr', 'pseudo' => 'Membre']);
+    $data = json_decode($response->getContent(), true);
+
+    $this->assertEquals(200, $response->getStatusCode());
+    $this->assertTrue($data['success']);
+    $this->assertEmailCount(1);
+  }
+
+  public function testForgotPasswordRequiresEmailAndPseudo(): void
+  {
+    $response = $this->post('/api/auth/forgot-password', ['email' => 'membre@mail.fr']);
+
+    $this->assertEquals(400, $response->getStatusCode());
+  }
+
+  public function testForgotPasswordUnknownAccountReturns404(): void
+  {
+    $response = $this->post('/api/auth/forgot-password', ['email' => 'inconnu@mail.fr', 'pseudo' => 'Inconnu']);
+
+    $this->assertEquals(404, $response->getStatusCode());
+  }
+
+
+  // Indisponible pour un compte de l'équipe
+  public function testForgotPasswordRejectedForTeamAccount(): void
+  {
+    $this->createUser('employe@mail.fr', 'Employe', ['ROLE_EMPLOYEE']);
+
+    $response = $this->post('/api/auth/forgot-password', ['email' => 'employe@mail.fr', 'pseudo' => 'Employe']);
 
     $this->assertEquals(403, $response->getStatusCode());
   }
