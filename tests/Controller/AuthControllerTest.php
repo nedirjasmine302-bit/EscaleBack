@@ -260,4 +260,54 @@ class AuthControllerTest extends WebTestCase
 
     $this->assertEquals(403, $response->getStatusCode());
   }
+
+
+  //Réinitialisation du mot de passe
+  public function testResetPasswordSuccess(): void
+  {
+    $this->createMember('membre@mail.fr', 'Membre', 'Temp123!');
+
+    $response = $this->post('/api/auth/reset-password', [
+      'email' => 'membre@mail.fr',
+      'temporaryPassword' => 'Temp123!',
+      'newPassword' => 'Nouveau1!'
+    ]);
+    $data = json_decode($response->getContent(), true);
+
+    $this->assertEquals(200, $response->getStatusCode());
+    $this->assertTrue($data['success']);
+  }
+
+  public function testResetPasswordRequiresAllFields(): void
+  {
+    $response = $this->post('/api/auth/reset-password', ['email' => 'membre@mail.fr']);
+
+    $this->assertEquals(400, $response->getStatusCode());
+  }
+
+  public function testResetPasswordRejectsWeakNewPassword(): void
+  {
+    $this->createMember('membre@mail.fr', 'Membre', 'Temp123!');
+
+    $response = $this->post('/api/auth/reset-password', [
+      'email' => 'membre@mail.fr',
+      'temporaryPassword' => 'Temp123!',
+      'newPassword' => 'faible'
+    ]);
+
+    $this->assertEquals(400, $response->getStatusCode());
+  }
+
+  public function testResetPasswordRejectsWrongTemporaryPassword(): void
+  {
+    $this->createMember('membre@mail.fr', 'Membre', 'Temp123!');
+
+    $response = $this->post('/api/auth/reset-password', [
+      'email' => 'membre@mail.fr',
+      'temporaryPassword' => 'Mauvais1!',
+      'newPassword' => 'Nouveau1!'
+    ]);
+
+    $this->assertEquals(400, $response->getStatusCode());
+  }
 }
