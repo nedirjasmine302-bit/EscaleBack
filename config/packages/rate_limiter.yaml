@@ -8,3 +8,12 @@ framework:
       policy: 'fixed_window'
       limit: 5
       interval: '1 minute'
+
+# En test, on ne veut pas que la limite de débit fasse échouer les tests.
+when@test:
+  framework:
+    rate_limiter:
+      login:
+        limit: 1000
+      sensitive:
+        limit: 1000
