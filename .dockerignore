@@ -1,0 +1,19 @@
+# Fichiers à NE PAS copier dans le contexte de build.
+.git
+.github
+vendor/
+var/
+node_modules/
+
+# Secrets et clés de DEV (ne doivent jamais entrer dans une image)
+.env.local
+.env.*.local
+config/jwt/*.pem
+
+# Outils de dev
+docker-compose.yml
+Dockerfile
+tests/
+.phpunit.cache/
+.vscode/
+.idea/
