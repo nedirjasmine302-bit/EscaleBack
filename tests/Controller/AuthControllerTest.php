@@ -4,6 +4,7 @@ namespace App\Tests\Controller;
 
 use App\Entity\User;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class AuthControllerTest extends WebTestCase
 {
@@ -159,5 +160,64 @@ class AuthControllerTest extends WebTestCase
 
     $this->assertFalse($taken['unique']);
     $this->assertTrue($free['unique']);
+  }
+
+
+  // Connexion
+  private function createMember(string $email, string $pseudo, string $password, bool $active = true): User
+  {
+    $entityManager = static::getContainer()->get('doctrine')->getManager();
+    $passwordHasher = static::getContainer()->get(UserPasswordHasherInterface::class);
+
+    $user = new User();
+    $user->setEmail($email);
+    $user->setPseudo($pseudo);
+    $user->setPassword($passwordHasher->hashPassword($user, $password));
+    $user->setCreatedAt(new \DateTimeImmutable());
+    $user->setActive($active);
+
+    $entityManager->persist($user);
+    $entityManager->flush();
+
+    return $user;
+  }
+
+
+  // Connexion réussie
+  public function testSignInSuccess(): void
+  {
+    $this->createMember('membre@mail.fr', 'Membre', 'Test123!');
+
+    $response = $this->post('/api/auth/sign-in', ['email' => 'membre@mail.fr', 'password' => 'Test123!']);
+    $data = json_decode($response->getContent(), true);
+
+    $this->assertEquals(200, $response->getStatusCode());
+    $this->assertTrue($data['data']['success']);
+    $this->assertNotEmpty($data['data']['token']);
+  }
+
+  public function testSignInWrongPasswordReturns401(): void
+  {
+    $this->createMember('membre@mail.fr', 'Membre', 'Test123!');
+
+    $response = $this->post('/api/auth/sign-in', ['email' => 'membre@mail.fr', 'password' => 'Mauvais1!']);
+
+    $this->assertEquals(401, $response->getStatusCode());
+  }
+
+  public function testSignInRequiresCredentials(): void
+  {
+    $response = $this->post('/api/auth/sign-in', ['email' => 'membre@mail.fr']);
+
+    $this->assertEquals(400, $response->getStatusCode());
+  }
+
+  public function testSignInSuspendedAccountReturns403(): void
+  {
+    $this->createMember('suspendu@mail.fr', 'Suspendu', 'Test123!', false);
+
+    $response = $this->post('/api/auth/sign-in', ['email' => 'suspendu@mail.fr', 'password' => 'Test123!']);
+
+    $this->assertEquals(403, $response->getStatusCode());
   }
 }
