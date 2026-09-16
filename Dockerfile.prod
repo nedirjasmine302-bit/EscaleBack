@@ -1,0 +1,32 @@
+FROM php:8.3-fpm
+
+RUN apt-get update && apt-get install -y \
+    git unzip nginx supervisor gettext-base \
+    libpng-dev libonig-dev libxml2-dev libzip-dev libicu-dev libssl-dev \
+    && docker-php-ext-install pdo pdo_mysql mysqli intl zip \
+    && pecl install mongodb \
+    && echo "extension=mongodb.so" > /usr/local/etc/php/conf.d/mongodb.ini \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -f /etc/nginx/sites-enabled/default
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+COPY . .
+ENV APP_ENV=prod
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts \
+    && composer dump-autoload --optimize --no-dev \
+    && test -f vendor/autoload_runtime.php || (echo "ERREUR: autoload_runtime.php manquant" && exit 1)
+
+RUN mkdir -p var/cache var/log var/share config/jwt \
+    && chown -R www-data:www-data var config/jwt
+
+COPY docker/nginx.conf /etc/nginx/templates/default.conf.template
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
