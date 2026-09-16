@@ -1,0 +1,12 @@
+nelmio_api_doc:
+    documentation:
+        info:
+            title: Escale — API
+            description: >-
+                API REST du catalogue de destinations Escale (authentification JWT).
+                Les routes de lecture du catalogue sont publiques ; les écritures
+                nécessitent un jeton Bearer.
+            version: 1.0.0
+    areas:
+        path_patterns:
+            - ^/api(?!/doc)

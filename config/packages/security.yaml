@@ -44,6 +44,9 @@ security:
         # Envoi d'une demande de contact accessible aux visiteurs
         - { path: ^/api/requests, methods: [POST], roles: PUBLIC_ACCESS }
 
+        # Documentation de l'API (Swagger UI) accessible sans être connecté
+        - { path: ^/api/doc, roles: PUBLIC_ACCESS }
+
         # Le reste des /api nécessite un jeton JWT valide
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
